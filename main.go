@@ -13,8 +13,6 @@ import (
 	"github.com/opentarock/service-gcm/service"
 )
 
-const maxSendRetries = 5
-
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
 
 var gcmapikey = flag.String("gcmapikey", "", "Google Cloud Messaging api key")
@@ -42,7 +40,7 @@ func main() {
 
 	gcmService := nservice.NewRepService(nservice.MakeServiceBindAddress(nservice.GcmServiceDefaultPort))
 
-	gcmSender := gcm.NewAsyncSender(*gcmapikey, maxSendRetries)
+	gcmSender := gcm.NewRetrySender(*gcmapikey)
 	gcmSender.DryRun = *dryrun
 	if gcmSender.DryRun {
 		log.Println("Dry run mode enabled")

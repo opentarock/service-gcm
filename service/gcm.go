@@ -4,15 +4,21 @@ import (
 	"encoding/json"
 	"log"
 	"strings"
+	"time"
+
+	"code.google.com/p/go.net/context"
 
 	gcmlib "github.com/alexjlockwood/gcm"
 
 	"github.com/opentarock/service-api/go/proto"
 	"github.com/opentarock/service-api/go/proto_errors"
 	"github.com/opentarock/service-api/go/proto_gcm"
+	"github.com/opentarock/service-api/go/reqcontext"
 	"github.com/opentarock/service-api/go/service"
 	"github.com/opentarock/service-gcm/gcm"
 )
+
+const defaultTimeout = 1 * time.Second
 
 type gcmServiceHandlers struct {
 	gcmSender gcm.Sender
@@ -26,6 +32,8 @@ func NewGcmServiceHandlers(gcmSender gcm.Sender) *gcmServiceHandlers {
 
 func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 	return service.MessageHandlerFunc(func(msg *proto.Message) proto.CompositeMessage {
+		ctx, cancel := context.WithTimeout(reqcontext.NewContext(context.Background(), msg), defaultTimeout)
+		defer cancel()
 		var request proto_gcm.SendMessageRequest
 		err := msg.Unmarshal(&request)
 		if err != nil {
@@ -56,9 +64,13 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 			RegistrationIDs: request.GetRegistrationIds(),
 			Data:            data,
 		}
-		// Ignore the returned error because the only implementation always
-		// returns nil.
-		s.gcmSender.SendMessage(gcmMessage)
+		err = s.gcmSender.SendMessage(ctx, gcmMessage)
+		if err != nil {
+			log.Println(err)
+			return proto.CompositeMessage{
+				Message: proto_errors.NewInternalError("Failed to send message."),
+			}
+		}
 
 		return proto.CompositeMessage{Message: &response}
 	})
