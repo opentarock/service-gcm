@@ -39,7 +39,7 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		var request proto_gcm.SendMessageRequest
 		err := msg.Unmarshal(&request)
 		if err != nil {
-			logger.Println(err)
+			logger.Warn(err.Error())
 			return proto.CompositeMessage{
 				Message: proto_errors.NewMalformedMessage(request.GetMessageType()),
 			}
@@ -52,12 +52,12 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		}
 
 		response := proto_gcm.SendMessageResponse{}
-		logger.Printf("[INFO] Sending message to %s", strings.Join(request.GetRegistrationIds(), ","))
+		logger.Info("Sending message", "registration_ids", strings.Join(request.GetRegistrationIds(), ","))
 		var data map[string]interface{}
 		if request.GetData() != "" {
 			err = json.Unmarshal([]byte(request.GetData()), &data)
 			if err != nil {
-				logger.Println("[ERROR] Malformed JSON data: ", err)
+				logger.Error("Malformed JSON data", "err", err.Error())
 				response.ErrorCode = proto_gcm.SendMessageResponse_MALFORMED_JSON.Enum()
 				return proto.CompositeMessage{Message: &response}
 			}
@@ -68,7 +68,7 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		}
 		err = s.gcmSender.SendMessage(ctx, gcmMessage)
 		if err != nil {
-			logger.Println(err)
+			logger.Crit(err.Error())
 			return proto.CompositeMessage{
 				Message: proto_errors.NewInternalError("Failed to send message."),
 			}
