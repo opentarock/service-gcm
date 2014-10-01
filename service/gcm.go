@@ -2,7 +2,6 @@ package service
 
 import (
 	"encoding/json"
-	"log"
 	"strings"
 	"time"
 
@@ -34,10 +33,13 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 	return service.MessageHandlerFunc(func(msg *proto.Message) proto.CompositeMessage {
 		ctx, cancel := context.WithTimeout(reqcontext.NewContext(context.Background(), msg), defaultTimeout)
 		defer cancel()
+
+		logger := reqcontext.ContextLogger(ctx)
+
 		var request proto_gcm.SendMessageRequest
 		err := msg.Unmarshal(&request)
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return proto.CompositeMessage{
 				Message: proto_errors.NewMalformedMessage(request.GetMessageType()),
 			}
@@ -50,12 +52,12 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		}
 
 		response := proto_gcm.SendMessageResponse{}
-		log.Printf("Sending message to %s", strings.Join(request.GetRegistrationIds(), ","))
+		logger.Printf("[INFO] Sending message to %s", strings.Join(request.GetRegistrationIds(), ","))
 		var data map[string]interface{}
 		if request.GetData() != "" {
 			err = json.Unmarshal([]byte(request.GetData()), &data)
 			if err != nil {
-				log.Println("Malformed JSON data: ", err)
+				logger.Println("[ERROR] Malformed JSON data: ", err)
 				response.ErrorCode = proto_gcm.SendMessageResponse_MALFORMED_JSON.Enum()
 				return proto.CompositeMessage{Message: &response}
 			}
@@ -66,7 +68,7 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		}
 		err = s.gcmSender.SendMessage(ctx, gcmMessage)
 		if err != nil {
-			log.Println(err)
+			logger.Println(err)
 			return proto.CompositeMessage{
 				Message: proto_errors.NewInternalError("Failed to send message."),
 			}
