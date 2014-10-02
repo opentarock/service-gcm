@@ -52,7 +52,6 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 		}
 
 		response := proto_gcm.SendMessageResponse{}
-		logger.Info("Sending message", "registration_ids", strings.Join(request.GetRegistrationIds(), ","))
 		var data map[string]interface{}
 		if request.GetData() != "" {
 			err = json.Unmarshal([]byte(request.GetData()), &data)
@@ -66,6 +65,8 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 			RegistrationIDs: request.GetRegistrationIds(),
 			Data:            data,
 		}
+		addParameters(gcmMessage, request.GetParams())
+		logger.Info("Sending message", "registration_ids", strings.Join(request.GetRegistrationIds(), ","))
 		err = s.gcmSender.SendMessage(ctx, gcmMessage)
 		if err != nil {
 			logger.Crit(err.Error())
@@ -76,4 +77,22 @@ func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 
 		return proto.CompositeMessage{Message: &response}
 	})
+}
+
+func addParameters(msg *gcmlib.Message, params *proto_gcm.Parameters) {
+	if params == nil {
+		return
+	}
+	if params.CollapseKey != nil {
+		msg.CollapseKey = params.GetCollapseKey()
+	}
+	if params.DelayWhileIdle != nil {
+		msg.DelayWhileIdle = params.GetDelayWhileIdle()
+	}
+	if params.TimeToLive != nil {
+		msg.TimeToLive = int(params.GetTimeToLive())
+	}
+	if params.RestrictedPackageName != nil {
+		msg.RestrictedPackageName = params.GetRestrictedPackageName()
+	}
 }

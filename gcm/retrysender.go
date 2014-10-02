@@ -25,10 +25,8 @@ func NewRetrySender(apiKey string) *RetrySender {
 }
 
 func (s *RetrySender) SendMessage(ctx context.Context, msg *gcmlib.Message) error {
-	b := backoff.NewExponentialBackOff()
-	b.InitialInterval = 10 * time.Millisecond
-	ticker := backoff.NewTicker(b)
-	cancel := func() { ticker.Stop() }
+	ticker, cancel := initBackoff()
+	msg.DryRun = s.DryRun
 	return contextutil.DoWithCancel(ctx, cancel, func() error {
 		count := 0
 		var err error
@@ -45,4 +43,12 @@ func (s *RetrySender) SendMessage(ctx context.Context, msg *gcmlib.Message) erro
 		}
 		return nil
 	})
+}
+
+func initBackoff() (*backoff.Ticker, func()) {
+	b := backoff.NewExponentialBackOff()
+	b.InitialInterval = 10 * time.Millisecond
+	ticker := backoff.NewTicker(b)
+	cancel := func() { ticker.Stop() }
+	return ticker, cancel
 }
