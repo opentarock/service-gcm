@@ -17,7 +17,7 @@ import (
 	"github.com/opentarock/service-gcm/gcm"
 )
 
-const defaultTimeout = 1 * time.Second
+const defaultTimeout = 5 * time.Second
 
 type gcmServiceHandlers struct {
 	gcmSender gcm.Sender
