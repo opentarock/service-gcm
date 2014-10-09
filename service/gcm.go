@@ -31,7 +31,7 @@ func NewGcmServiceHandlers(gcmSender gcm.Sender) *gcmServiceHandlers {
 
 func (s *gcmServiceHandlers) SendMessageHandler() service.MessageHandler {
 	return service.MessageHandlerFunc(func(msg *proto.Message) proto.CompositeMessage {
-		ctx, cancel := context.WithTimeout(reqcontext.NewContext(context.Background(), msg), defaultTimeout)
+		ctx, cancel := reqcontext.WithRequest(context.Background(), msg, defaultTimeout)
 		defer cancel()
 
 		logger := reqcontext.ContextLogger(ctx)
